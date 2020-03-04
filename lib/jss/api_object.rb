@@ -1636,6 +1636,8 @@ require 'jss/api_object/vppable'
 require 'jss/api_object/sitable'
 require 'jss/api_object/mdm'
 require 'jss/api_object/management_history'
+require 'jss/api_object/ldap_object/ldap_user_group.rb'
+require 'jss/api_object/ldap_object/ldap_user.rb'
 
 ### Mix-in Sub Modules with Classes
 require 'jss/api_object/criteriable'

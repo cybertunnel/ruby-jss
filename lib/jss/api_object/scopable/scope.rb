@@ -68,7 +68,12 @@ module JSS
         users: JSS::User,
         user: JSS::User,
         user_groups: JSS::UserGroup,
-        user_group: JSS::UserGroup
+        user_group: JSS::UserGroup,
+        ldap_user: JSS::LDAPUser,
+        ldap_users: JSS::LDAPUser,
+        ldap_user_group: JSS::LDAPUserGroup,
+        ldap_user_groups: JSS::LDAPUserGroup
+
       }.freeze
 
       # Some things get checked in LDAP as well as the JSS
@@ -202,9 +207,17 @@ module JSS
 
         @limitations = {}
         if raw_scope[:limitations]
-          LIMITATIONS.each do |k|
+
+          limitations = LIMITATIONS.map do |k|
+            if k.to_s.include? "ldap"
+              k.to_s.split("_").pop.to_sym
+            else
+              k
+            end
+          end
+          limitations.each do |k|
             raw_scope[:limitations][k] ||= []
-            @limitations[k] = raw_scope[:limitations][k].compact.map { |n| n[:id].to_i }
+            @limitations[k] = raw_scope[:limitations][k].compact.map { |n| n[:name].to_s }
           end # LIMITATIONS.each do |k|
         end # if raw_scope[:limitations]
 
@@ -391,6 +404,7 @@ module JSS
         raise JSS::AlreadyExistsError, "Can't set #{key} limitation for '#{name}' because it's already an explicit exclusion." if @exclusions[key] && @exclusions[key].include?(item_id)
 
         @limitations[key] << item_id
+        puts @container
         @container.should_update if @container
       end
 
@@ -517,7 +531,20 @@ module JSS
           list.compact!
           list.delete 0
           list_as_hash = list.map { |i| { id: i } }
-          limitations << SCOPING_CLASSES[klass].xml_list(list_as_hash, :id)
+          klass = case klass
+            when :users then :ldap_users
+            when :user_groups then :ldap_user_groups
+            else
+              klass
+            end
+
+            
+            if klass == :ldap_users || klass == :ldap_user_groups
+              list_as_hash = list_as_hash.map { |x| {name: x[:id]} }
+              limitations << SCOPING_CLASSES[klass].xml_list(list_as_hash, :name)
+            else
+              limitations << SCOPING_CLASSES[klass].xml_list(list_as_hash, :id)
+            end
         end
 
         exclusions = scope.add_element('exclusions')
@@ -577,7 +604,20 @@ module JSS
         raise JSS::InvalidDataError, "#{realm} key must be one of :#{possible_keys.join(', :')}" \
           unless possible_keys.include? key
 
+            if realm == :limitation
+              key = 
+                case key
+                when :user then :ldap_user
+                when :users then :ldap_users
+                when :user_group then :ldap_user_group
+                when :user_groups then :ldap_user_groups
+                else
+                  key
+                end
+            end
+
         # return nil or a valid id
+
         id = SCOPING_CLASSES[key].valid_id ident
         raise JSS::NoSuchItemError, "No existing #{key} matching '#{ident}'" if error_if_not_found && id.nil?
         id

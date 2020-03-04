@@ -332,3 +332,6 @@ module JSS
   end # class ldap server
 
 end # module
+
+require 'jss/api_object/ldap_object/ldap_user_group.rb'
+require 'jss/api_object/ldap_object/ldap_user.rb'
